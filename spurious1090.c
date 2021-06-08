@@ -184,11 +184,16 @@ static unsigned uModeZFrames = 0;
 static unsigned uModeOFrames = 0;
 static unsigned uModeAFrames = 0;
 static unsigned uModeCFrames = 0;
-static unsigned uModeSpuriousFrames = 0;
+static unsigned uModeSSpuriousFrames = 0;
 static unsigned uModeASpuriousOneFrames = 0;
 static unsigned uModeASpuriousZeroFrames = 0;
 static unsigned uModeCSpuriousOneFrames = 0;
 static unsigned uModeCSpuriousZeroFrames = 0;
+//static unsigned uModeSDuplicateFrames = 0;
+//static unsigned uModeSOverlaidFrames = 0;
+
+char strOut[4096];
+char * p;
 
 void mainShowData(void) {
     struct aircraft *a = Modes.aircrafts;
@@ -212,15 +217,14 @@ void mainShowData(void) {
     interactiveUpdateAircraftModeS();
 
     progress = spinner[time(NULL)%4];
+	p = strOut;
 
 #ifndef _WIN32
-    printf("\x1b[H\x1b[2J");    // Clear the screen
-#else
-    cls();
+    p+=sprintf(p,"\x1b[H\x1b[2J");    // Clear the screen
 #endif
 
-    printf("Hex     Mode  Sqwk  Flight   Alt    Spd  Hdg    Lat      Long   Sig  Msgs   Ti%c\n", progress);
-    printf("-------------------------------------------------------------------------------\n");
+    p += sprintf(p, "Hex     Mode  Sqwk  Flight   Alt    Spd  Hdg    Lat      Long   Sig  Msgs   Ti%c\n", progress);
+    p += sprintf(p, "-------------------------------------------------------------------------------\n");
 
     uAllFrames = Modes.DFCount[ 0] + Modes.DFCount[ 1] + Modes.DFCount[ 2] + Modes.DFCount[ 3]
                + Modes.DFCount[ 4] + Modes.DFCount[ 5] + Modes.DFCount[ 6] + Modes.DFCount[ 7]
@@ -265,7 +269,7 @@ void mainShowData(void) {
                 if (uOneBitError == 0) {
 
                   uOneBitError = interactiveUpdateAircraftModeCOneBitError(a);
-                  if      (uOneBitError == 0)        {uModeSpuriousFrames      += a->messages;}
+                  if      (uOneBitError == 0)        {uModeSSpuriousFrames     += a->messages;}
                   else if (uOneBitError & a->modeC)  {uModeCSpuriousOneFrames  += a->messages;}
                   else                               {uModeCSpuriousZeroFrames += a->messages;}
                 }
@@ -278,29 +282,41 @@ void mainShowData(void) {
         a = a->next;
     }
 
-    printf("%8d ModeS  Frames (All)    (DF0 =%d, DF1 =%d, DF2 =%d, DF3 =%d)\n", uAllFrames, Modes.DFCount[0],Modes.DFCount[1],Modes.DFCount[2],Modes.DFCount[3]);
-    printf("                                (DF4 =%d, DF5 =%d, DF6 =%d, DF7 =%d)\n",             Modes.DFCount[4],Modes.DFCount[5],Modes.DFCount[6],Modes.DFCount[7]);
-    printf("                                (DF8 =%d, DF9 =%d, DF10=%d, DF11=%d)\n",           Modes.DFCount[8],Modes.DFCount[9],Modes.DFCount[10],Modes.DFCount[11]);
-    printf("                                (DF12=%d, DF13=%d, DF14=%d, DF15=%d)\n",         Modes.DFCount[12],Modes.DFCount[13],Modes.DFCount[14],Modes.DFCount[15]);
-    printf("                                (DF16=%d, DF17=%d, DF18=%d, DF19=%d)\n",         Modes.DFCount[16],Modes.DFCount[17],Modes.DFCount[18],Modes.DFCount[19]);
-    printf("                                (DF20=%d, DF21=%d, DF22=%d, DF23=%d)\n",         Modes.DFCount[20],Modes.DFCount[21],Modes.DFCount[22],Modes.DFCount[23]);
-    printf("                                (DF24=%d, DF25=%d, DF26=%d, DF27=%d)\n",         Modes.DFCount[24],Modes.DFCount[25],Modes.DFCount[26],Modes.DFCount[27]);
-    printf("                                (DF28=%d, DF29=%d, DF30=%d, DF31=%d)\n",         Modes.DFCount[28],Modes.DFCount[29],Modes.DFCount[30],Modes.DFCount[31]);
-    printf("\n");
-    printf("%8d ModeS  Altitude Frames (DF0=%d, DF4 =%d, DF16=%d, DF20=%d)\n", uAltitudeFrames, Modes.DFCount[0],Modes.DFCount[4],Modes.DFCount[16],Modes.DFCount[20]);
-    printf("%8d ModeS  Squawk Frames   (DF5=%d, DF21=%d)\n", uSquawkFrames, Modes.DFCount[5],Modes.DFCount[21]);
-    printf("\n");
-    printf("%8d ModeAC Frames (All)\n", uModeACFrames);
-    printf("%8d ModeA  Frames (Matching ModeS Squawk)\n", uModeAFrames);
-    printf("%8d ModeC  Frames (Matching ModeS Altitude)\n", uModeCFrames);
-    printf("%8d ModeAC Frames (XX0000)\n", uModeZFrames);
-    printf("%8d ModeAC Frames (One Bit Set)\n", uModeOFrames);
-    printf("%8d ModeA  Frames (One Bit Zero Errors)\n", uModeASpuriousZeroFrames);
-    printf("%8d ModeA  Frames (One Bit One Errors)\n", uModeASpuriousOneFrames);
-    printf("%8d ModeC  Frames (One Bit Zero Errors)\n", uModeCSpuriousZeroFrames);
-    printf("%8d ModeC  Frames (One Bit One Errors)\n", uModeCSpuriousOneFrames);
-    printf("%8d ModeAC Frames (Matching Nothing)\n", uModeSpuriousFrames);
-    printf("\n");
+    p+=sprintf(p,"%8d ModeS  Frames (All)    (DF0 =%d, DF1 =%d, DF2 =%d, DF3 =%d)\n", uAllFrames, Modes.DFCount[0],Modes.DFCount[1],Modes.DFCount[2],Modes.DFCount[3]);
+    p+=sprintf(p,"                                (DF4 =%d, DF5 =%d, DF6 =%d, DF7 =%d)\n",             Modes.DFCount[4],Modes.DFCount[5],Modes.DFCount[6],Modes.DFCount[7]);
+    p+=sprintf(p,"                                (DF8 =%d, DF9 =%d, DF10=%d, DF11=%d)\n",           Modes.DFCount[8],Modes.DFCount[9],Modes.DFCount[10],Modes.DFCount[11]);
+    p+=sprintf(p,"                                (DF12=%d, DF13=%d, DF14=%d, DF15=%d)\n",         Modes.DFCount[12],Modes.DFCount[13],Modes.DFCount[14],Modes.DFCount[15]);
+    p+=sprintf(p,"                                (DF16=%d, DF17=%d, DF18=%d, DF19=%d)\n",         Modes.DFCount[16],Modes.DFCount[17],Modes.DFCount[18],Modes.DFCount[19]);
+    p+=sprintf(p,"                                (DF20=%d, DF21=%d, DF22=%d, DF23=%d)\n",         Modes.DFCount[20],Modes.DFCount[21],Modes.DFCount[22],Modes.DFCount[23]);
+    p+=sprintf(p,"                                (DF24=%d, DF25=%d, DF26=%d, DF27=%d)\n",         Modes.DFCount[24],Modes.DFCount[25],Modes.DFCount[26],Modes.DFCount[27]);
+    p+=sprintf(p,"                                (DF28=%d, DF29=%d, DF30=%d, DF31=%d)\n",         Modes.DFCount[28],Modes.DFCount[29],Modes.DFCount[30],Modes.DFCount[31]);
+    p+=sprintf(p,"\n");
+    p+=sprintf(p,"%8d ModeS  Altitude Frames (DF0=%d, DF4 =%d, DF16=%d, DF20=%d)\n", uAltitudeFrames, Modes.DFCount[0],Modes.DFCount[4],Modes.DFCount[16],Modes.DFCount[20]);
+    p+=sprintf(p,"%8d ModeS  Squawk Frames   (DF5=%d, DF21=%d)\n", uSquawkFrames, Modes.DFCount[5],Modes.DFCount[21]);
+    p+=sprintf(p,"%8d ModeS  Short Duplicates\n", Modes.uModeSShortDuplicateFrames);
+    p+=sprintf(p,"%8d ModeS  Short Overlapping\n", Modes.uModeSShortOverlaidFrames);
+    p+=sprintf(p,"%8d ModeS  Long Duplicates\n", Modes.uModeSLongDuplicateFrames);
+    p+=sprintf(p,"%8d ModeS  Long Overlapping\n", Modes.uModeSLongOverlaidFrames);
+    p+=sprintf(p,"\n");
+    p+=sprintf(p,"%8d ModeAC Frames (All)\n", uModeACFrames);
+    p+=sprintf(p,"%8d ModeA  Frames (Matching ModeS Squawk)\n", uModeAFrames);
+    p+=sprintf(p,"%8d ModeC  Frames (Matching ModeS Altitude)\n", uModeCFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (Duplicates)\n", Modes.uModeACDuplicateFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (Overlapping)\n", Modes.uModeACOverlaidFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (Interleaved)\n", Modes.uModeACInterleavedFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (XX0000)\n", uModeZFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (One Bit Set)\n", uModeOFrames);
+    p+=sprintf(p,"%8d ModeA  Frames (One Bit Zero Errors)\n", uModeASpuriousZeroFrames);
+    p+=sprintf(p,"%8d ModeA  Frames (One Bit One Errors)\n", uModeASpuriousOneFrames);
+    p+=sprintf(p,"%8d ModeC  Frames (One Bit Zero Errors)\n", uModeCSpuriousZeroFrames);
+    p+=sprintf(p,"%8d ModeC  Frames (One Bit One Errors)\n", uModeCSpuriousOneFrames);
+    p+=sprintf(p,"%8d ModeAC Frames (Matching Nothing)\n", uModeSSpuriousFrames);
+    p+=sprintf(p,"\n");
+
+#ifdef _WIN32
+    cls();
+#endif
+	printf("%s", strOut);
 }
 //
 //=========================================================================

@@ -308,10 +308,11 @@ unsigned interactiveUpdateAircraftModeCOneBitError(struct aircraft *a) {
 //
 struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     struct aircraft *a, *aux;
+	uint64_t tDelta;
 
     if (mm->msgtype <= 32){
 		Modes.DFCount[mm->msgtype]++;
-	} 
+	}
 
     // Return if (checking crc) AND (not crcok) AND (not fixed)
     if (Modes.check_crc && (mm->crcok == 0) && (mm->correctedbits == 0))
@@ -454,6 +455,67 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     if ((Modes.bEnableDFLogging) && (mm->msgtype < 32)) {
         interactiveCreateDF(a,mm);
     }
+
+	tDelta = mm->timestampMsg - Modes.timestampLast;
+
+	if (mm->msgtype < 16) {
+		// It's a Short ModeS...
+		if (tDelta <= 768) {
+			// with a gap of less than 8uS preamble plus 56 bits (768 clocks at 12MHz)
+			if (strncmp(mm->msg, Modes.msgLast, 7))
+				{Modes.uModeSShortOverlaidFrames++;}
+			else
+				{Modes.uModeSShortDuplicateFrames++;}
+		}
+		memmove(Modes.msgLast, mm->msg, 7);
+
+	} else if (mm->msgtype < 32) {
+		// It's a Long ModeS...
+		if (tDelta <= 1440) {
+			// with a gap of less than 8uS preamble plus 112 bits (1440 clocks at 12MHz)
+			if (strncmp(mm->msg, Modes.msgLast, 14))
+				{Modes.uModeSLongOverlaidFrames++;}
+			else
+				{Modes.uModeSLongDuplicateFrames++;}
+		}
+		memmove(Modes.msgLast, mm->msg, 14);
+
+	} else {
+		// It's a ModeA/C... 
+		if (tDelta <= 313) {
+			// with a gap of less than 26.1uS (313.2 clocks at 12MHz)
+
+
+			if (strncmp(mm->msg, Modes.msgLast, 2))
+				{
+				uint32_t nDelta = (uint32_t) tDelta;
+				uint32_t nBits;
+				uint32_t nBitPhase;
+				// Each 'bit' lasts 1.45uS, so convert tDelta into the number of bits overlapped
+				// The clock is 12MHz
+				nDelta    = ((nDelta << 4) * 10) / 174;
+				nBitPhase = (nDelta & 15);
+				nBits     = (nDelta >> 4);
+
+				// BitPhase will be 0..15.
+				// The 'high' part of the bit lasts 0.45uS, which is 31% of the time. We will therefore
+				// Allow interleaved if the phase is between 5 and 10, or declare overlaid if it's 0..4
+				// or 11..15
+                if      (nBitPhase < 5) {
+					Modes.uModeACOverlaidFrames++;
+				} else if (nBitPhase < 11) {
+					Modes.uModeACInterleavedFrames++;
+				} else {
+					Modes.uModeACOverlaidFrames++;
+				}
+			}
+			else
+				{Modes.uModeACDuplicateFrames++;}
+		}
+		memmove(Modes.msgLast, mm->msg, 2);
+	}
+
+	Modes.timestampLast = mm->timestampMsg;
 
     return (a);
 }

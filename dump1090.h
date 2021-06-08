@@ -333,6 +333,8 @@ struct {                             // Internal state
     pthread_mutex_t pDF_mutex;        // Mutex to synchronize pDF access
     struct stDF    *pDF;              // Pointer to DF list
     unsigned        DFCount[64];
+	uint64_t		timestampLast;
+    unsigned char   msgLast[16];
 
     // Statistics
     unsigned int stat_valid_preamble;
@@ -367,6 +369,14 @@ struct {                             // Internal state
     unsigned int stat_DF_Len_Corrected;
     unsigned int stat_DF_Type_Corrected;
     unsigned int stat_ModeAC;
+
+	unsigned int uModeACOverlaidFrames;
+	unsigned int uModeACDuplicateFrames;
+	unsigned int uModeACInterleavedFrames;
+	unsigned int uModeSShortOverlaidFrames;
+	unsigned int uModeSShortDuplicateFrames;
+	unsigned int uModeSLongOverlaidFrames;
+	unsigned int uModeSLongDuplicateFrames;
 
     unsigned int stat_blocks_processed;
     unsigned int stat_blocks_dropped;
