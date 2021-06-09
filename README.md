@@ -1,284 +1,360 @@
-Dump1090 README
+Spurious1090 README
 ===
 
-Dump 1090 is a Mode S decoder specifically designed for RTLSDR devices.
+Spurious 1090 is a Mode A/C/S display utility designed to work with any
+ModeA/C/S receiver that provides TCP/IP output in a Beast style data 
+stream.
 
-The main features are:
-
-* Robust decoding of weak messages, with mode1090 many users observed
-  improved range compared to other popular decoders.
-* Network support: TCP30003 stream (MSG5...), Raw packets, HTTP.
-* Embedded HTTP server that displays the currently detected aircrafts on
-  Google Map.
-* Single bit errors correction using the 24 bit CRC.
-* Ability to decode DF11, DF17 messages.
-* Ability to decode DF formats like DF0, DF4, DF5, DF16, DF20 and DF21
-  where the checksum is xored with the ICAO address by brute forcing the
-  checksum field using recently seen ICAO addresses.
-* Decode raw IQ samples from file (using --ifile command line switch).
-* Interactive command-line-interfae mode where aircrafts currently detected
-  are shown as a list refreshing as more data arrives.
-* CPR coordinates decoding and track calculation from velocity.
-* TCP server streaming and recceiving raw data to/from connected clients
-  (using --net).
+It can be used in the same way as View1090, but displays the data 
+received in a statistical way. The idea is to try and get receiver 
+manufacturers to improve the quality of the data they provide, and
+not just concentrate on quantity.
 
 Installation
 ---
 
-Type "make".
+There is no installation. If you don't trust executables written by idiots 
+like me and downloaded from t'interweb then the source code is provided in 
+the root directory together with a Visual Studio 6.0 C++ project file. Download
+it, inspect the source files and then compile it yourself.
 
-Normal usage
+There is no Linux make file, although since the code is derived from dump1090 
+it shouldn't be too difficult for someone to build it under Linux if you so wish.
+
+The pre-compiled Windows exe is available in both Release and Debug forms in the 
+associated sub directories. I've also included all the non standard windows 
+DLL's, and a sample batch file to kick things off.
+
+I suggest most users just download all the files in the /Release subdirectory and
+put them in a suitable directory on your machine - probably called spurious1090.
+
+Open the batch file in a text editor of your choice, and change the 
+--net-bo-ipaddr and --net-bo-port parameters to point at the TCP/IP address
+and port of your receiver. Then execute the batch file and you should see a
+screen full of numbers appear.
+
+The program has been tested on Win7Pro-32bit and Win10Pro-64. It's a simple
+console app, so should work on virtually any 32 or 64 bit version of Windows 
+from NT4 up.
+
+Normal Output
 ---
 
-To capture traffic directly from your RTL device and show the captured traffic
-on standard output, just run the program without options at all:
+So what do all the numbers mean? Some of them will be self evident, some 
+perhaps not so.
 
-    ./dump1090
-
-To just output hexadecimal messages:
-
-    ./dump1090 --raw
-
-To run the program in interactive mode:
-
-    ./dump1090 --interactive
-
-To run the program in interactive mode, with networking support, and connect
-with your browser to http://localhost:8080 to see live traffic:
-
-    ./dump1090 --interactive --net
-
-In iteractive mode it is possible to have a less information dense but more
-"arcade style" output, where the screen is refreshed every second displaying
-all the recently seen aircrafts with some additional information such as
-altitude and flight number, extracted from the received Mode S packets.
-
-Using files as source of data
+ModeS Frames (All)
 ---
+This is the total count of all the Mode S frames output by your receiver.
 
-To decode data from file, use:
+To the right of this the individual Download Formats (DF) counts are 
+displayed. There are 32 DF types defined in the ICAO specificaiton for
+Mode S, although only some of them are actually used.
 
-    ./dump1090 --ifile /path/to/binfile
+Specifically DF0, DF4, DF5, DF11, DF16, DF17, DF18, DF20, DF21 are
+relatively common, and you should see these counts ticking up.
 
-The binary file should be created using `rtl_sdr` like this (or with any other
-program that is able to output 8-bit unsigned IQ samples at 2Mhz sample rate).
+The other DF's are either undefined, or for military use, so in theory you
+probably shouldn't see any of these. You may see the occasional spurious
+frame from your receiver though.
 
-    rtl_sdr -f 1090000000 -s 2000000 -g 50 output.bin
-
-In the example `rtl_sdr` a gain of 50 is used, simply you should use the highest
-gain availabe for your tuner. This is not needed when calling Dump1090 itself
-as it is able to select the highest gain supported automatically.
-
-It is possible to feed the program with data via standard input using
-the --ifile option with "-" as argument.
-
-Additional options
+ModeS Altitude Frames
 ---
+This is the number of Mode S frames containing altitude information.
 
-Dump1090 can be called with other command line options to set a different
-gain, frequency, and so forth. For a list of options use:
+Mode S Altitude information is included in DF types DF0, DF4, DF16 and DF20.
+The individual counts for these DF types is displayed to the right.
 
-    ./dump1090 --help
-
-Everything is not documented here should be obvious, and for most users calling
-it without arguments at all is the best thing to do.
-
-Reliability
+ModeS Squawk Frames
 ---
+This is the number of Mode S frames containing squawk information.
 
-By default Dump1090 checks for decoding errors using the 24-bit CRC checksum,
-where available. Messages with errors are discarded.
+Mode S Altitude information is included in DF types DF5, DF21.
+The individual counts for these DF types is displayed to the right.
 
-The --fix command line switch enables fixing single bit error correction
-based on the CRC checksum. Technically, it uses a table of precomputed
-checksum differences resulting from single bit errors to look up the
-wrong bit position.
-
-This is indeed able to fix errors and works reliably in my experience,
-however if you are interested in very reliable data I suggest to use
-the --no-fix command line switch in order to disable error fixing.
-
-Performances and sensibility of detection
+ModeS Short Duplicates
 ---
+This is an annoying feature of several receiver types. They output
+the same Frame several times, with a timestamp only a few micro-seconds
+apart. 
 
-In my limited experience Dump1090 was able to decode a big number of messages
-even in conditions where I encountered problems using other programs, however
-no formal test was performed so I can't really claim that this program is
-better or worse compared to other similar programs.
+A Short ModeS Frame consists of an 8uS preamble followed by a 56 bit
+data stream. The total time to transmit this whole frame is therefore 
+64uS. 
 
-If you can capture traffic that Dump1090 is not able to decode properly, drop
-me an email with a download link. I may try to improve the detection during
-my free time (this is just an hobby project).
+If we see two Frames containing identical data, and whose timestamps 
+differ by less than 64uS then the two frames cannot possibly both be 
+'real'. Your receiver must have output the same frame twice - Why?
 
-Network server features
+Receiver manufacturers don't seem to care about this because they aren't 
+feeding false data, and it does increase their apparant "Message rates"
+which is all many of them care about. Of course you can double your 
+message rate if you output the same frame twice - but you aren't adding 
+any extra information by doing it.
+
+ModeS Short Overlapping
 ---
+A Short ModeS Frame consists of an 8uS preamble followed by a 56 bit
+data stream. The total time to transmit this whole frame is therefore 
+64uS. 
 
-By enabling the networking support with --net Dump1090 starts listening
-for clients connections on port 30002 and 30001 (you can change both the
-ports if you want, see --help output).
+If we see two Frames containing different data, and whose timestamps 
+differ by less than 64uS then the two frames cannot possibly both be 
+'real' since they must overlap in time.
 
-Port 30002
+This is curious because most ModeS message types are CRC protected, 
+so if either of the two messages where corrupt the CRC should have 
+rejected them. So how can they both pass CRC checking, but overlap 
+in time - huhh?
+
+ModeS Long Duplicates
 ---
+This is an annoying feature of several receiver types. They output
+the same Frame several times, with a timestamp only a few micro-seconds
+apart. 
 
-Connected clients are served with data ASAP as they arrive from the device
-(or from file if --ifile is used) in the raw format similar to the following:
+A Long ModeS Frame consists of an 8uS preamble followed by a 112 bit
+data stream. The total time to transmit this whole frame is therefore 
+120uS. 
 
-    *8D451E8B99019699C00B0A81F36E;
+If we see two Frames containing identical data, and whose timestamps 
+differ by less than 120uS then the two frames cannot possibly both be 
+'real'. Your receiver must have output the same frame twice - Why?
 
-Every entry is separated by a simple newline (LF character, hex 0x0A).
+Receiver manufacturers don't seem to care about this because they aren't 
+feeding false data, and it does increase their apparant "Message rates"
+which is all many of them care about. Of course you can double your 
+message rate if you output the same frame twice - but you aren't adding 
+any extra information by doing it.
 
-Port 30001
+ModeS Long Overlapping
 ---
+A Long ModeS Frame consists of an 8uS preamble followed by a 112 bit
+data stream. The total time to transmit this whole frame is therefore 
+120uS. 
 
-Port 30001 is the raw input port, and can be used to feed Dump1090 with
-data in the same format as specified above, with hex messages starting with
-a `*` and ending with a `;` character.
+If we see two Frames containing different data, and whose timestamps 
+differ by less than 120uS then the two frames cannot possibly both be 
+'real' since they must overlap in time.
 
-So for instance if there is another remote Dump1090 instance collecting data
-it is possible to sum the output to a local Dump1090 instance doing something
-like this:
+This is curious because most ModeS message types are CRC protected, 
+so if either of the two messages where corrupt the CRC should have 
+rejected them. So how can they both pass CRC checking, but overlap 
+in time - huhh?
 
-    nc remote-dump1090.example.net 30002 | nc localhost 30001
-
-It is important to note that what is received via port 30001 is also
-broadcasted to clients listening to port 30002.
-
-In general everything received from port 30001 is handled exactly like the
-normal traffic from RTL devices or from file when --ifile is used.
-
-It is possible to use Dump1090 just as an hub using --ifile with /dev/zero
-as argument as in the following example:
-
-    ./dump1090 --net-only
-
-Or alternatively to see what's happening on the screen:
-
-    ./dump1090 --net-only --interactive
-
-Then you can feed it from different data sources from the internet.
-
-Port 30003
+ModeAC Frames (All)
 ---
+This is the total number of ModeA/C frames output by the receiver.
 
-Connected clients are served with messages in SBS1 (BaseStation) format,
-similar to:
+Comnpare the count of ModeAC frames to the count of ModeS frames.
+In the UK, good receivers (Beast) typically show about 2.5 times the 
+number of ModeA/C Frames as Mode S.
 
-    MSG,4,,,738065,,,,,,,,420,179,,,0,,0,0,0,0
-    MSG,3,,,738065,,,,,,,35000,,,34.81609,34.07810,,,0,0,0,0
+Lesser receivers (Dongles) typically have ModeAC:ModeS ratios worse
+than 1:1 - often much worse - like 1:4 rather than 2.5:1 often seen 
+with a Beast. The implication then is that the dongle is missing 
+somewhere in excess of 90% of all ModeAC frames.
 
-This can be used to feed data to various sharing sites without the need to use another decoder.
+The rates will vary due to location around the world, and depend on 
+what your local radar sites are actually asking for - if they are 
+only asking for ModeS then of course you won't see any ModeAC.
 
-Antenna
+ModeA Frames (Matching ModeS Squawk)
 ---
+This is the count of the number of ModeA frames which exactly match a 
+known ModeS_A code (ie a Mode A code derived from ModeS DF5/DF21 data).
 
-Mode S messages are transmitted in the 1090 Mhz frequency. If you have a decent
-antenna you'll be able to pick up signals from aircrafts pretty far from your
-position, especially if you are outdoor and in a position with a good sky view.
+Add the "ModeA Frames (Matching ModeS Squawk)" count to the 
+"ModeC Frames (Matching ModeS Altitude)" and then divide by 
+"ModeAC Frames (All)".
 
-You can easily build a very cheap antenna following the istructions at:
+That gives you a percentage of valid (i.e. non-spurious) ModeAC codes
+received. See the problem? Few receivers give better than 70% valid codes.
 
-    http://antirez.com/news/46
-
-With this trivial antenna I was able to pick up signals of aircrafts 200+ Km
-away from me.
-
-If you are interested in a more serious antenna check the following
-resources:
-
-* http://gnuradio.org/redmine/attachments/download/246/06-foster-adsb.pdf
-* http://www.lll.lu/~edward/edward/adsb/antenna/ADSBantenna.html
-* http://modesbeast.com/pix/adsb-ant-drawing.gif
-
-Aggressive mode
+ModeC Frames (Matching ModeS Altitude)
 ---
+This is the count of the number of ModeC frames which exactly match a 
+known ModeS_C code (ie a Mode C code derived from ModeS 
+DF0/DF4/DF16/DF20 data).
 
-With --aggressive it is possible to activate the *aggressive mode* that is a
-modified version of the Mode S packet detection and decoding.
-The aggresive mode uses more CPU usually (especially if there are many planes
-sending DF17 packets), but can detect a few more messages.
+Add the "ModeA Frames (Matching ModeS Squawk)" count to the 
+"ModeC Frames (Matching ModeS Altitude)" and then divide by 
+"ModeAC Frames (All)".
 
-The algorithm in aggressive mode is modified in the following ways:
+That gives you a percentage of valid (i.e. non-spurious) ModeAC codes
+received. See the problem? Few receivers give better than 70% valid codes.
 
-* Up to two demodulation errors are tolerated (adjacent entires in the
-  magnitude vector with the same eight). Normally only messages without
-  errors are checked.
-* It tries to fix DF17 messages with CRC errors resulting from any two bit
-  errors.
-
-The use of aggressive mdoe is only advised in places where there is
-low traffic in order to have a chance to capture some more messages.
-
-Debug mode
+ModeAC Frames (Duplicates)
 ---
+A ModeAC Frame consists of 15 bit times, each bit period lasting 1.45uS. 
+Therefore if takes 21.75uS to transmit the frame. Things are slightly
+complicated by the SPI (Squawk Ident) bit which occurs outside the main 
+frame at bit time 24.65uS, lasting another 1.45uS, so 26.1uS
 
-The Debug mode is a visual help to improve the detection algorithm or to
-understand why the program is not working for a given input.
+We can argue about what the limit should be here, but I've decided it 
+should be 26.1uS - which covers the SPI bit.
 
-In this mode messages are displayed in an ASCII-art style graphical
-representation, where the individial magnitude bars sampled at 2Mhz are
-displayed.
+So if we get the same ModeAC code twice within a 26.1uS interval then either
+there are two aircraft transmitting the same code synchronously (unlikely)
+or the receiver has output the same frame twice (naughty naughty).
 
-An index shows the sample number, where 0 is the sample where the first
-Mode S peak was found. Some additional background noise is also added
-before the first peak to provide some context.
-
-To enable debug mode and check what combinations of packets you can
-log, use `mode1090 --help` to obtain a list of available debug flags.
-
-Debug mode includes an optional javascript output that is used to visualize
-packets using a web browser, you can use the file debug.html under the
-'tools' directory to load the generated frames.js file.
-
-How this program works?
+ModeAC Frames (Overlapping)
 ---
+A ModeAC Frame consists of 15 bit times, each bit period lasting 1.45uS. 
+Therefore it takes 21.75uS to transmit the frame. Things are slightly
+complicated by the SPI (Squawk Ident) bit which occurs outside the main 
+frame at bit time 24.65uS, lasting another 1.45uS, so 26.1uS
 
-The code is very documented and written in order to be easy to understand.
-For the diligent programmer with a Mode S specification on his hands it
-should be trivial to understand how it works.
+We can argue about what the limit should be here, but I'lll argue it 
+should be 26.1uS - which covers the SPI bit - untill someone convinces me 
+otherwise.
 
-The algorithms I used were obtained basically looking at many messages
-as displayed using a trow-away SDL program, and trying to model the algorithm
-based on how the messages look graphically.
+The '1' bits in a ModeAC only last 0.45uS, and then there is a 1uS space 
+before the next bit. It is therefore possible for ModeAC codes from two 
+closely spaced aircraft to be interleaved in such a way that both can be 
+successfully received. see https://www.radartutorial.eu/13.ssr/sr15.en.html
 
-How to test the program?
+However, for non-synchronous de-garbling to work the bits of the two frames 
+must be separated from each other by some odd multiple of half a bit period, 
+plus or minus a bit.
+
+The Overlapping count is the number of ModeAC frames which occur less than 26.1uS
+after the previous frame, and the data is different to the previous frame, and the 
+timestamps indicate the '1' bits must overlap. This means that both this frame, and 
+the previous one should be considered garbled, and hence unreliable.
+
+For instance, a typical decode might be (these are real - received by me yesterday!)
+
+5424 received at timestamp +0
+2612 received at timestamp +35 (+2.92uS, or 2.01 bit times later)
+6616 received at timestamp +36 (+3.00uS, or 2.07 bit times later)
+6627 received at timestamp +54 (+4.5uS, or 3.10 bit times later)
+
+If we draw out what the off-air bit pattern would have been for these 4 codes, and delay 
+each code by the timestamp offset in bit periods we get..
+
+5424 = 101100100000111
+2612 =   110010000011101
+6616 =   110010000011111
+6627 =    100100000111111
+
+See what is going on? 4 codes reported, different timestamps, and no way of knowing which, 
+if any, is valid.
+
+ModeAC Frames (Interleaved)
 ---
+Same description as above in "ModeAC Frames (Overlapping)", except the timestamps 
+indicate the '1' bits are time aligned such that they interleave correctly and do 
+not overlap. 
 
-If you have an RTLSDR device and you happen to be in an area where there
-are aircrafts flying over your head, just run the program and check for signals.
+This means the two frames may be correctly decoded and hence valid. I wouldn't bet 
+too much money on it though.
 
-However if you don't have an RTLSDR device, or if in your area the presence
-of aircrafts is very limited, you may want to try the sample file distributed
-with the Dump1090 distribution under the "testfiles" directory.
-
-Just run it like this:
-
-    ./dump1090 --ifile testfiles/modes1.bin
-
-What is --strip mode?
+ModeAC Frames (XX0000)
 ---
+Some receivers (Beast for example) spew out an almost constant stream of
+useless XX0000 codes day and night. These are almost always spurious, and 
+probably generated by noise. In my location about 10% of all ModeAC frames 
+output are XX0000.
 
-It is just a simple filter that will get raw IQ 8 bit samples in input
-and will output a file missing all the parts of the file where I and Q
-are lower than the specified <level> for more than 32 samples.
+ModeAC Frames (One Bit Set)
+---
+This count is the number of ModeAC frames that had only one data bit set. 
+There are 12 such codes : XX0001, XX0002, XX0004, XX0010, XX0020, XX0040, 
+XX0100, XX0200, XX0400, XX1000, XX2000 and XX4000. Some of these might be 
+valid, but chances are that most are spurious.
 
-Use it like this:
+ModeA Frames (One Bit Zero Errors)
+---
+This is the count of the number of ModeA frames which do not exactly match
+a known ModeS_A code (i.e. a ModeA code derived from ModeS data), but do 
+match a known ModeS_A code if you flip one (and only one) of the '0' bits 
+to a '1' in the received ModeA. 
 
-    cat big.bin | ./dump1090 --snip 25 > small.bin
+So, for instance, if we know (From ModeS DF5/DF21) that an aircraft should 
+be Squawking 6401, and we receive a ModeA 6400, and there is no known 
+aircraft using 6400, then by flipping bit 0 from a '0' to a '1' we can get 
+6401 and achieve a 'hit'. 
 
-I used it in order to create a small test file to include inside this
-program source code distribution.
+This means that the receiver has possibly mis-interpreted the radio signal
+which 'should' have been 6401, and spuriously decoded '6400' instead.
+
+ModeA Frames (One Bit One Errors)
+---
+This is the count of the number of ModeA frames which do not exactly match
+a known ModeS_A code (ie a Mode A code derived from ModeS data), but do 
+match a known ModeS_A code if you flip one (and only one) of the '1' bits 
+to a '0' in the received ModeA. 
+
+So, for instance, if we know (From ModeS DF5/DF21) that an aircraft should be
+Squawking 6401, and we receive a ModeA 6403, and there is no known aircraft
+using 6403, then by flipping bit 1 from a '1' to a '0' we can get 6401 and
+achieve a 'hit'. 
+
+This means that the receiver has possibly mis-interpreted the radio signal
+which 'should' have been 6401, and spuriously decoded '6403' instead.
+
+ModeC Frames (One Bit Zero Errors)
+---
+This is the count of the number of ModeC frames which do not exactly match
+a known ModeS_C code (ie a ModeC code derived from ModeS data), but do 
+match a known ModeS_C code if you flip one (and only one) of the '0' bits 
+to a '1' in the received ModeC. 
+
+So, for instance, if we know (From ModeS DF0/DF4/DF16/DF21) that an aircraft 
+should be emmitting a code corrosponding to FL330 (which is 1324), and we 
+receive code 0324, and there is no known aircraft flying at FL605 (which is 
+what 0324 represents) then by flipping bit 9 from a '0' to a '1' we can get 
+1324 and achieve a 'hit'. 
+
+This means that the receiver has possibly mis-interpreted the radio signal
+which 'should' have been 1324, and spuriously decoded '0324' instead.
+
+ModeC Frames (One Bit One Errors)
+---
+This is the count of the number of ModeC frames which do not exactly match
+a known ModeS_C code (ie a ModeC code derived from ModeS data), but do 
+match a known ModeS_C code if you flip one (and only one) of the '1' bits 
+to a '0' in the received ModeC. 
+
+So, for instance, if we know (From ModeS DF0/DF4/DF16/DF21) that an aircraft 
+should be emmitting a code corrosponding to FL330 (which is 1324), and we 
+receive code 1724, and there is no known aircraft flying at FL335 (which is 
+what 1724 represents) then by flipping bit 8 from a '0' to a '1' we can get 
+1324 and achieve a 'hit'. 
+
+This means that the receiver has possibly mis-interpreted the radio signal
+which 'should' have been 1324, and spuriously decoded '1724' instead.
+
+ModeAC Frames (Matching Nothing)
+---
+This is the number of frames that the receiver has output which do not exactly
+match a Known ModeS_A or a Known ModeS_C, are'nt XX0000, aren't One bit set,
+and can't be explained by One bit one or one bit zero errors.
+
+In other words, we don't know what on earth they are. They are probably a mix
+of the following...
+
+1) Completely spurious noise induced codes.
+2) Spurious codes caused by receiver decoder generated errors/mistakes.
+3) Real Mode 3A/3C codes from an aircraft not equipped with a Mode S transponder
+4) Real Mode 3A/3C codes from an aircraft with it's Mode S transponder turned off
+5) Real Mode 1/2 SSR codes - often from Military or Govt aircraft.
+
+If you live close to a light aircraft airfield then 3 or 4 may be likely, but 
+probably only during daylight hours and in good weather.
+
+If you live close to a busy military airfield then 3, 4 and 5 are all possible.
+
+However, I'll stick my neck out and say that for most users 1 and 2 will be the
+primary cause of spurious codes. Hence spurious1090.
 
 Contributing
 ---
 
-Dump1090 was written during some free time during xmas 2012, it is an hobby
-project so I'll be able to address issues and improve it only during
-free time, however you are incouraged to send pull requests in order to
-improve the program. A good starting point can be the TODO list included in
-the source distribution.
 
 Credits
 ---
-
-Dump1090 was written by Salvatore Sanfilippo <antirez@gmail.com> and is
-released under the BSD three clause license.
+Spurious1090 was written by Malcolm Robb, and is derived from an original
+codebase developed originally for Dump1090 by Salvatore Sanfilippo 
+<antirez@gmail.com> which is released under the BSD three clause license.
