@@ -236,7 +236,7 @@ void mainShowData(void) {
                + Modes.DFCount[28] + Modes.DFCount[29] + Modes.DFCount[30] + Modes.DFCount[31];
     uAltitudeFrames = Modes.DFCount[0] + Modes.DFCount[4] + Modes.DFCount[16] + Modes.DFCount[20];
     uSquawkFrames = Modes.DFCount[5] + Modes.DFCount[21];
-    uModeACFrames = Modes.DFCount[5] + Modes.DFCount[32];
+    uModeACFrames = Modes.DFCount[32];
 
     while(a) {
 
